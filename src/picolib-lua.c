@@ -1,5 +1,5 @@
 #include "picolib-lua.h"
-#include "picolib-core.h"   // основная библиотека
+#include "picolib.h"   // основная библиотека
 #include <lauxlib.h>
 #include <lualib.h>
 #include <stdint.h>
@@ -151,11 +151,13 @@ static int lua_camera(lua_State *L) {
 }
 
 // --- Звук ---
+#if PICOLIB_USE_AUDIO == 1
 static int lua_sfx(lua_State *L) {
     int index = luaL_checkinteger(L, 1);
     sfx(index);
     return 0;
 }
+#endif
 
 // --- Сохранение ---
 // save(pos, value)
@@ -256,7 +258,9 @@ void picolib_lua_register(lua_State *L) {
     lua_register(L, "camera", lua_camera);
     lua_register(L, "mouse", lua_mouse);
     lua_register(L, "mousep", lua_mousep);
+    #if PICOLIB_USE_AUDIO == 1
     lua_register(L, "sfx", lua_sfx);
+    #endif
     lua_register(L, "save", lua_save_storage);
     lua_register(L, "load", lua_load_storage);
     lua_register(L, "is_save", lua_is_save);

@@ -2,11 +2,17 @@
 #ifndef PICOLIB_H
 #define PICOLIB_H
 
-#include <raylib.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
-#include "picolib_conf-core.h"
+#include "picolib_conf.h"
+#include <raylib.h>
+
+// Каналы для tone()
+#define TONE_PULSE1     0   // канал 0 — квадратная волна
+#define TONE_PULSE2     1   // канал 1 — квадратная волна
+#define TONE_TRIANGLE   2   // канал 2 — треугольная волна
+#define TONE_NOISE      3   // канал 3 — шум
 
 #ifdef __cplusplus
 extern "C" {
@@ -41,18 +47,24 @@ typedef struct {
     int16_t w, h;   // ширина и высота
 } Rect;
 
-extern RenderTexture2D target;
-extern bool show_fps;
-extern int16_t cam_x;
-extern int16_t cam_y;
 
+extern RenderTexture2D target;
 extern Texture2D sprite_sheet;
 extern bool spritesheet_loaded;
+extern int16_t cam_x;
+extern int16_t cam_y;
+extern bool show_fps;
+
+extern Font pico_font;
+extern bool font_loaded;
+extern float font_size;    // Размер шрифта (5px идеально для сетки 128x128)
+extern float font_spacing;
 
 #if PICOLIB_USE_AUDIO == 1
 extern Sound sounds[PICOLIB_MAX_SOUNDS];
 extern bool sounds_loaded[PICOLIB_MAX_SOUNDS];
 #endif
+
 
 // --- Инициализация ---
 void picolib_load_spritesheet(const char* filepath); // Загрузка спрайт-листа
@@ -60,14 +72,8 @@ void picolib_load_font(const char* filepath);
 // Загружает все звуки из папки "sounds/" по именам файлов "0.wav", "1.wav" и т.д.
 void picolib_load_sounds();
 
-// Загружает спрайт-лист из данных в памяти
-void picolib_load_spritesheet_from_memory(const unsigned char* data, int size);
-// Загружает шрифт из данных в памяти
-void picolib_load_font_from_memory(const unsigned char* data, int size);
-// Загружает карту из данных в памяти
-void picolib_load_map_from_memory(const char* data);
-
 // --- Основные функции ---
+void init(void);
 void update(void);
 void draw(void);
 
@@ -78,6 +84,9 @@ void circ(int16_t x, int16_t y, int16_t r, uint8_t color);
 void circfill(int16_t x, int16_t y, int16_t r, uint8_t color);
 void rect(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint8_t color);
 void rectfill(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint8_t color);
+void line(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint8_t color);
+void oval(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint8_t color);
+void ovalfill(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint8_t color);
 
 // --- Спрайты ---
 // Простая версия: рисует один спрайт 8x8
@@ -88,30 +97,37 @@ void spr_pro(int16_t n, int16_t x, int16_t y, uint8_t w, uint8_t h, bool flip_x,
 
 void spr_scale(int16_t n, int16_t x, int16_t y, uint8_t zoom);
 
-
 // --- API для ввода ---
 bool btn(uint8_t id);
 bool btnp(uint8_t id);
-
 
 // --- API для камеры ---
 // Устанавливает смещение камеры и возвращает предыдущее значение.
 // Чтобы сбросить камеру, вызовите camera(0, 0).
 picolib_vec2 camera(int16_t x, int16_t y);
 
-
 // --- API для звука ---
 // Проигрывает звук по индексу
+#if PICOLIB_USE_AUDIO == 1
 void sfx(int index);
+#endif
 
+// Генерирует звук с заданными параметрами
+#if PICOLIB_USE_TONE == 1
+void tone(uint32_t frequency, uint32_t duration, uint32_t volume, uint32_t flags);
+#endif
 
 // --- API для карты .csv
 #if PICOLIB_USE_MAP == 1
 extern uint8_t map[MAP_ROWS][MAP_COLS];    // карта (только ID тайлов)
 
 void map_draw(int celx, int cely, int sx, int sy, int celw, int celh);
+void map_full(void);
 uint8_t mget(int x, int y);
 void mset(int x, int y, uint8_t id);
+
+extern int map_loaded_flag;
+extern int parse_csv_line(const char* line, uint8_t* out, int max_count);
 #endif
 
 // ============================================================
@@ -123,6 +139,7 @@ extern char* save_file_path;
 
 void save(uint8_t pos, uint64_t value);
 uint64_t load(uint8_t pos);
+// Проверяет есть ли файл
 bool is_save(void);
 bool storage_save_all(void); 
 
@@ -156,6 +173,13 @@ void unload_data(unsigned char* data);
 
 // --- API для столкновение ---
 bool col_rect(Rect* a, Rect* b);
+
+
+// --- API для иницилизации ---
+void picolib_init(void);
+void picolib_run(void (*init)(void), void (*update)(void), void (*draw)(void));
+void picolib_cleanup(void);
+
 
 #ifdef __cplusplus
 }

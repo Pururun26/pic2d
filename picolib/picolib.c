@@ -34,13 +34,11 @@
 //         Не забывайте, что прогресс сохраняется только при закрытии окна или автосохранении.
 // ============================================================
 
-#include "picolib-core.h"
+#include "picolib.h"
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include <raylib.h>
-
-// #define TARGET_WINDOW_SIZE 512
 
 RenderTexture2D target;
 
@@ -60,7 +58,7 @@ int16_t cam_y = 0;
 
 bool show_fps = false;
 
-Color palette[16] = {
+Color palette[PICOLIB_COLOR_COUNT] = {
     {0x00, 0x00, 0x00, 0xFF}, // 0: black
     {0x1D, 0x2B, 0x53, 0xFF}, // 1: dark-blue
     {0x7E, 0x25, 0x53, 0xFF}, // 2: dark-purple
@@ -102,27 +100,11 @@ void picolib_load_spritesheet(const char* filepath)
     }
 }
 
-void picolib_load_spritesheet_from_memory(const unsigned char* data, int size) {
-    Image img = LoadImageFromMemory(".png", data, size);
-    if (img.data != NULL) {
-        sprite_sheet = LoadTextureFromImage(img);
-        SetTextureFilter(sprite_sheet, TEXTURE_FILTER_POINT);
-        spritesheet_loaded = true;
-        UnloadImage(img);
-    } else {
-        // заглушка
-        Image fallback = GenImageColor(128, 128, MAGENTA);
-        sprite_sheet = LoadTextureFromImage(fallback);
-        UnloadImage(fallback);
-        spritesheet_loaded = true;
-    }
-}
-
 // --- ПЕРЕМЕННЫЕ ДЛЯ ШРИФТА ---
-static Font pico_font;
-static bool font_loaded = false;
-static float font_size = 5.0f;    // Размер шрифта (5px идеально для сетки 128x128)
-static float font_spacing = 1.0f; // Расстояние между буквами
+Font pico_font;
+bool font_loaded = false;
+float font_size = 5.0f;    // Размер шрифта (5px идеально для сетки 128x128)
+float font_spacing = 1.0f; // Расстояние между буквами
 
 // --- 1. РЕАЛИЗАЦИЯ ЗАГРУЗКИ ШРИФТА ---
 void picolib_load_font(const char* filepath) {
@@ -142,25 +124,6 @@ void picolib_load_font(const char* filepath) {
         font_size = 10.0f; // Стандартный шрифт лучше смотрится в размере 10
         font_loaded = false;
         TraceLog(LOG_WARNING, "PICOLIB: Font file '%s' not found. Using default font.", filepath);
-    }
-}
-
-void picolib_load_font_from_memory(const unsigned char* data, int size) {
-    Image img = LoadImageFromMemory(".png", data, size);
-    if (img.data != NULL) {
-        pico_font = LoadFontFromImage(img, MAGENTA, 32);
-        UnloadImage(img);
-        font_loaded = true;
-        font_size = 5.0f;        // как в файловой версии
-        font_spacing = 1.0f;     // как в файловой версии
-        TraceLog(LOG_INFO, "PICOLIB: Font loaded from memory.");
-    } else {
-        // Запасной вариант — стандартный шрифт Raylib
-        pico_font = GetFontDefault();
-        font_size = 10.0f;
-        font_spacing = 1.0f;
-        font_loaded = false;
-        TraceLog(LOG_WARNING, "PICOLIB: Failed to load font from memory. Using default.");
     }
 }
 
@@ -195,7 +158,7 @@ picolib_vec2 camera(int16_t x, int16_t y)
 // --- 3. РИСОВАНИЕ ---
 void cls(uint8_t color)
 {
-    if (color < 16 )
+    if (color < PICOLIB_COLOR_COUNT )
     {
         ClearBackground(palette[color]);
     }
@@ -212,7 +175,7 @@ void print(const char* format, int16_t x, int16_t y, uint8_t color, ...) {
     vsnprintf(buffer, sizeof(buffer), format, args);
     va_end(args);
     
-    Color c = (color < 16) ? palette[color] : palette[7];
+    Color c = (color < PICOLIB_COLOR_COUNT) ? palette[color] : palette[0];
     // Позиция с учетом камеры
     Vector2 pos = { (float)(x - cam_x), (float)(y - cam_y) };
     // Используем DrawTextEx для отрисовки кастомного шрифта
@@ -249,20 +212,62 @@ void rectfill(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint8_t color) {
     DrawRectangle(x0 - cam_x, y0 - cam_y, w, h, palette[color]);
 }
 
+// Рисует линию от (x0, y0) до (x1, y1) цветом color (0-15)
+void line(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint8_t color) {
+    Color c = (color < PICOLIB_COLOR_COUNT) ? palette[color] : palette[0];
+    DrawLine(x0 - cam_x, y0 - cam_y, x1 - cam_x, y1 - cam_y, c);
+}
+
+// Рисует пустой овал (эллипс) внутри прямоугольника (x0,y0)-(x1,y1)
+void oval(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint8_t color) {
+    Color c = (color < PICOLIB_COLOR_COUNT) ? palette[color] : palette[0];
+    
+    // Нормализуем координаты (чтобы x0 <= x1, y0 <= y1)
+    int16_t left = (x0 < x1) ? x0 : x1;
+    int16_t right = (x0 < x1) ? x1 : x0;
+    int16_t top = (y0 < y1) ? y0 : y1;
+    int16_t bottom = (y0 < y1) ? y1 : y0;
+    
+    int16_t cx = (left + right) / 2;
+    int16_t cy = (top + bottom) / 2;
+    float rx = (right - left) / 2.0f;
+    float ry = (bottom - top) / 2.0f;
+    
+    DrawEllipseLines(cx - cam_x, cy - cam_y, rx, ry, c);
+}
+
+// Рисует залитый овал (эллипс) внутри прямоугольника (x0,y0)-(x1,y1)
+void ovalfill(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint8_t color) {
+    Color c = (color < PICOLIB_COLOR_COUNT) ? palette[color] : palette[0];
+    
+    // Нормализуем координаты (чтобы x0 <= x1, y0 <= y1)
+    int16_t left = (x0 < x1) ? x0 : x1;
+    int16_t right = (x0 < x1) ? x1 : x0;
+    int16_t top = (y0 < y1) ? y0 : y1;
+    int16_t bottom = (y0 < y1) ? y1 : y0;
+    
+    int16_t cx = (left + right) / 2;
+    int16_t cy = (top + bottom) / 2;
+    float rx = (right - left) / 2.0f;
+    float ry = (bottom - top) / 2.0f;
+    
+    DrawEllipse(cx - cam_x, cy - cam_y, rx, ry, c);
+}
+
 
 // --- 4. СПРАЙТЫ ---
 void spr_pro(int16_t n, int16_t x, int16_t y, uint8_t w, uint8_t h, bool flip_x, bool flip_y) {
     if (!spritesheet_loaded) return;
     if (w == 0 || h == 0) return;
 
-    int16_t col = n % 16; 
-    int16_t row = n / 16;
-    int16_t pixel_w = w * 8;
-    int16_t pixel_h = h * 8;
+    int16_t col = n % PICOLIB_SPRITE_SHEET_TILES; 
+    int16_t row = n / PICOLIB_SPRITE_SHEET_TILES;
+    int16_t pixel_w = w * PICOLIB_SPRITE_SIZE;
+    int16_t pixel_h = h * PICOLIB_SPRITE_SIZE;
 
     Rectangle src = {
-        (float)(col * 8),
-        (float)(row * 8),
+        (float)(col * PICOLIB_SPRITE_SIZE),
+        (float)(row * PICOLIB_SPRITE_SIZE),
         (float)pixel_w,
         (float)pixel_h
     };
@@ -294,25 +299,25 @@ void spr(int16_t n, int16_t x, int16_t y) {
 // Рисует спрайт в маштабировании
 void spr_scale(int16_t n, int16_t x, int16_t y, uint8_t zoom) {
     if (!spritesheet_loaded) return;
-    if (zoom == 0) return;  // Если zoom 0 — ничего не рисуем
+    if (zoom == 0) return;
 
-    int16_t col = n % 16;
-    int16_t row = n / 16;
+    int16_t col = n % PICOLIB_SPRITE_SHEET_TILES;
+    int16_t row = n / PICOLIB_SPRITE_SHEET_TILES;
 
-    // Исходный тайл 8×8
+    // Исходный тайл (размер определяется макросом)
     Rectangle src = {
-        (float)(col * 8),
-        (float)(row * 8),
-        8.0f,
-        8.0f
+        (float)(col * PICOLIB_SPRITE_SIZE),
+        (float)(row * PICOLIB_SPRITE_SIZE),
+        (float)PICOLIB_SPRITE_SIZE,
+        (float)PICOLIB_SPRITE_SIZE
     };
 
     // Целевой прямоугольник с учётом камеры и масштаба
     Rectangle dest = {
         (float)(x - cam_x),
         (float)(y - cam_y),
-        8.0f * zoom,
-        8.0f * zoom
+        (float)PICOLIB_SPRITE_SIZE * zoom,
+        (float)PICOLIB_SPRITE_SIZE * zoom
     };
 
     DrawTexturePro(sprite_sheet, src, dest, (Vector2){0, 0}, 0.0f, WHITE);
@@ -357,6 +362,147 @@ void sfx(int index) {
     }
 #endif
 }
+
+#if PICOLIB_USE_TONE == 1
+#include <math.h>
+#include <stdlib.h>
+#include <time.h>
+
+// Генераторы волн (можно вынести в отдельный файл, но пока внутри)
+// Генератор синусоиды
+static void generate_sine(short* samples, int count, float freq, int sample_rate, int volume) {
+    for (int i = 0; i < count; i++) {
+        float t = (float)i / sample_rate;
+        float value = sinf(2.0f * M_PI * freq * t);
+        samples[i] = (short)(value * volume * 327.67f);
+    }
+}
+
+static void generate_square(short* samples, int count, float freq, int sample_rate, int volume, float duty) {
+    for (int i = 0; i < count; i++) {
+        float t = (float)i / sample_rate;
+        float phase = fmodf(t * freq, 1.0f);
+        float value = (phase < duty) ? 1.0f : -1.0f;
+        samples[i] = (short)(value * volume * 327.67f);
+    }
+}
+
+// Генератор треугольной волны
+static void generate_triangle(short* samples, int count, float freq, int sample_rate, int volume) {
+    for (int i = 0; i < count; i++) {
+        float t = (float)i / sample_rate;
+        float phase = fmodf(t * freq, 1.0f);
+        float value = 2.0f * fabsf(2.0f * phase - 1.0f) - 1.0f;
+        samples[i] = (short)(value * volume * 327.67f);
+    }
+}
+
+// Генератор пилообразной волны
+static void generate_sawtooth(short* samples, int count, float freq, int sample_rate, int volume) {
+    for (int i = 0; i < count; i++) {
+        float t = (float)i / sample_rate;
+        float phase = fmodf(t * freq, 1.0f);
+        float value = 2.0f * phase - 1.0f;
+        samples[i] = (short)(value * volume * 327.67f);
+    }
+}
+
+// Генератор шума (принимает те же параметры для единообразия)
+static void generate_noise(short* samples, int count, float freq, int sample_rate, int volume) {
+    (void)freq;         // параметр не используется
+    (void)sample_rate;  // параметр не используется
+    for (int i = 0; i < count; i++) {
+        float value = (float)rand() / RAND_MAX * 2.0f - 1.0f;
+        samples[i] = (short)(value * volume * 327.67f);
+    }
+}
+
+// Массивы для хранения синтезированных звуков
+static Sound tone_sounds[PICOLIB_MAX_TONE_SOUNDS];
+static bool tone_loaded[PICOLIB_MAX_TONE_SOUNDS] = {false};
+static int next_tone_slot = 0; // индекс следующего слота для перезаписи
+
+void tone(uint32_t frequency, uint32_t duration, uint32_t volume, uint32_t flags) {
+    // Если громкость нулевая или длительность нулевая — ничего не делаем
+    if (volume == 0 || duration == 0) return;
+
+    // Извлекаем канал (0-3)
+    int channel = flags & 3;
+    if (channel > 3) return; // только 4 канала
+
+    // Параметры звука
+    int sample_rate = 44100;
+    float freq = (float)frequency;
+    float duration_sec = duration / 60.0f;   // кадры -> секунды
+    int sample_count = (int)(sample_rate * duration_sec);
+    if (sample_count <= 0) return;
+
+    // Выделяем память под сэмплы
+    short* samples = malloc(sample_count * sizeof(short));
+    if (!samples) return;
+
+    // Генерируем волну в зависимости от канала
+    switch (channel) {
+        case TONE_PULSE1:
+            generate_square(samples, sample_count, freq, sample_rate, volume, 0.125f); // 12.5%
+            break;
+        case TONE_PULSE2:
+            generate_square(samples, sample_count, freq, sample_rate, volume, 0.25f);  // 25%
+            break;
+        case TONE_TRIANGLE:
+            generate_triangle(samples, sample_count, freq, sample_rate, volume);
+            break;
+        case TONE_NOISE:
+            generate_noise(samples, sample_count, freq, sample_rate, volume);
+            break;
+        default:
+            free(samples);
+            return;
+    }
+
+    // Создаём Wave
+    Wave wave = {
+        .frameCount = sample_count,
+        .sampleRate = sample_rate,
+        .sampleSize = 16,
+        .channels = 1,
+        .data = samples
+    };
+
+    // Загружаем Sound
+    Sound sound = LoadSoundFromWave(wave);
+    if (sound.frameCount == 0) {
+        free(samples);
+        return;
+    }
+
+    // Ищем свободный слот
+    int slot = -1;
+    for (int i = 0; i < PICOLIB_MAX_TONE_SOUNDS; i++) {
+        if (!tone_loaded[i]) {
+            slot = i;
+            break;
+        }
+    }
+    // Если все заняты — перезаписываем следующий по очереди
+    if (slot == -1) {
+        slot = next_tone_slot;
+        if (tone_loaded[slot]) {
+            UnloadSound(tone_sounds[slot]);
+            tone_loaded[slot] = false;
+        }
+        next_tone_slot = (next_tone_slot + 1) % PICOLIB_MAX_TONE_SOUNDS;
+    }
+
+    // Сохраняем звук и проигрываем
+    tone_sounds[slot] = sound;
+    tone_loaded[slot] = true;
+    PlaySound(sound);
+
+    // Освобождаем сэмплы (они уже скопированы в Sound)
+    free(samples);
+}
+#endif
 
 
 // --- API для мышки ---
@@ -443,8 +589,7 @@ picolib_mouse mousep(void) {
 
 // --- API для сохранение и загрузки ---
 #if PICOLIB_USE_SAVE == 1
-
-char* save_file_path = NULL;
+char* save_file_path = "storage.bin";
 
 bool save_text(const char *fileName, const char *text) { return SaveFileText(fileName, text); }
 char* load_text(const char* fileName) { return LoadFileText(fileName); }
@@ -506,7 +651,6 @@ void save(uint8_t pos, uint64_t value) {
 bool is_save(void) {
     return FileExists(save_file_path);
 }
-
 #endif
 
 
@@ -517,7 +661,7 @@ int map_loaded_flag = 0;
 
 // Парсит одну строку CSV, извлекая целые числа (0-255) и сохраняя их в массив out.
 // Возвращает количество распарсенных чисел.
-static int parse_csv_line(const char* line, uint8_t* out, int max_count) {
+int parse_csv_line(const char* line, uint8_t* out, int max_count) {
     int count = 0;
     const char* p = line;
     
@@ -594,10 +738,9 @@ void picolib_load_map_from_memory(const char* data) {
 
 // Основная функция рисования карты (без слоёв, рисует все тайлы)
 void map_draw(int celx, int cely, int sx, int sy, int celw, int celh) {
-    static int map_loaded = 0;
-    if (!map_loaded) {
+    if (!map_loaded_flag) {
         load_map_from_csv(PICOLIB_MAP_FILE);
-        map_loaded = 1;
+        map_loaded_flag = 1;
     }
 
     if (celw <= 0 || celh <= 0) return;
@@ -649,4 +792,139 @@ bool col_rect(Rect* a, Rect* b) {
     if (b_left > a_right) return false;
 
     return true;
+}
+
+
+
+void picolib_init(void) {
+    uint16_t initial_scale_x = PICOLIB_WINDOW_WIDTH / PICOLIB_WIDTH;
+    uint16_t initial_scale_y = PICOLIB_WINDOW_HEIGHT / PICOLIB_HEIGHT;
+    if (initial_scale_x < 1) initial_scale_x = 1;
+    if (initial_scale_y < 1) initial_scale_y = 1;
+    
+    InitWindow(PICOLIB_WIDTH * initial_scale_x, PICOLIB_HEIGHT * initial_scale_y, PICOLIB_TITLE);
+
+    // Скрываем системный курсор
+    HideCursor();
+    
+    SetTargetFPS(PICOLIB_FPS);
+
+    // Аудио и tone
+    #if PICOLIB_USE_AUDIO == 1 || PICOLIB_USE_TONE == 1
+        InitAudioDevice();
+        #if PICOLIB_USE_AUDIO == 1
+            picolib_load_sounds();
+        #endif
+    #endif
+
+    // ВАЖНО: Загружаем спрайт-лист, шрифт здесь! 
+    picolib_load_spritesheet(PICOLIB_SS);
+    picolib_load_font(PICOLIB_FONT);
+
+    target = LoadRenderTexture(PICOLIB_WIDTH, PICOLIB_HEIGHT);
+    SetTextureFilter(target.texture, TEXTURE_FILTER_POINT);
+
+    srand(time(NULL));
+}
+
+
+void picolib_run(void (*init)(void), void (*update)(void), void (*draw)(void)) {
+    // Вызов пользовательской инициализации
+    if (init) init();
+
+    #if PICOLIB_USE_SAVE == 1
+        int autosave_counter = 0;
+        const int AUTOSAVE_INTERVAL = 60 * 10 * 60; // 10 минут при 60 FPS = 36000 кадров
+    #endif
+
+    while (!WindowShouldClose()) {
+        // Обработка клавиш (F11, Ctrl+P)
+        if (IsKeyPressed(KEY_F11)) ToggleFullscreen(); 
+
+        // Переключение FPS по Ctrl+P
+        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_P)) {
+            show_fps = !show_fps;
+        }
+
+        #if PICOLIB_USE_SAVE == 1
+            // Автосохранение
+            autosave_counter++;
+            if (autosave_counter >= AUTOSAVE_INTERVAL) {
+                storage_save_all();
+                autosave_counter = 0;
+                // можно вывести сообщение "Autosaved"
+            }
+        #endif
+
+        // Пользовательское обновление
+        if (update) update();
+
+        // Рендеринг
+        BeginTextureMode(target);
+        if (draw) draw();
+        if (show_fps) {
+            int fps = GetFPS();
+            print("FPS: %d", cam_x+PICOLIB_WIDTH-30, cam_y+2, 7, fps); // ваш шрифт + камера
+        }
+        EndTextureMode();
+
+        BeginDrawing();
+        ClearBackground(BLACK);
+        int screenW = GetScreenWidth();
+        int screenH = GetScreenHeight();
+
+        // Вычисляем масштаб с сохранением пропорций
+        float scaleX = (float)screenW / PICOLIB_WIDTH;
+        float scaleY = (float)screenH / PICOLIB_HEIGHT;
+        float current_scale = (scaleX < scaleY) ? scaleX : scaleY; // Переименовали в current_scale
+
+        // Вычисляем смещение для центрирования
+        int offsetX = (int)((screenW - PICOLIB_WIDTH * current_scale) / 2);
+        int offsetY = (int)((screenH - PICOLIB_HEIGHT * current_scale) / 2);
+
+        // Отрисовываем текстуру с центрированием
+        DrawTexturePro(
+            target.texture,
+            (Rectangle){ 0, 0, (float)PICOLIB_WIDTH, (float)-PICOLIB_HEIGHT },
+            (Rectangle){ (float)offsetX, (float)offsetY, PICOLIB_WIDTH * current_scale, PICOLIB_HEIGHT * current_scale },
+            (Vector2){ 0, 0 },
+            0.0f,
+            WHITE
+        );
+        EndDrawing();
+    }
+}
+
+void picolib_cleanup(void) {
+// Очистка памяти при выходе
+    UnloadRenderTexture(target);
+    if (spritesheet_loaded) UnloadTexture(sprite_sheet);
+
+    // --- Выгружаем ВСЕ звуки ДО закрытия аудио ---
+    #if PICOLIB_USE_AUDIO == 1
+        for (int i = 0; i < PICOLIB_MAX_SOUNDS; i++) {
+            if (sounds_loaded[i]) UnloadSound(sounds[i]);
+        }
+    #endif
+
+    #if PICOLIB_USE_TONE == 1
+        for (int i = 0; i < PICOLIB_MAX_TONE_SOUNDS; i++) {
+            if (tone_loaded[i]) {
+                UnloadSound(tone_sounds[i]);
+                tone_loaded[i] = false;
+            }
+        }
+    #endif
+
+    // --- ТЕПЕРЬ закрываем аудио ---
+    #if PICOLIB_USE_AUDIO == 1 || PICOLIB_USE_TONE == 1
+        CloseAudioDevice();
+    #endif
+
+    #if PICOLIB_USE_SAVE == 1
+        storage_save_all();
+    #endif
+
+    ShowCursor();
+    CloseWindow();
 }

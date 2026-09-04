@@ -7,7 +7,8 @@
 #include <string.h>   // для strcpy/strcat
 #include <sys/stat.h> // для mkdir (Linux/macOS)
 #include <direct.h>   // для _mkdir (Windows)
-#include "picolib-core.h"
+#include "picolib.h"
+#include "pic2d-core.h"
 #include "picolib-lua.h"
 #include "miniz.h"
 
@@ -262,7 +263,7 @@ int main(int argc, char *argv[]) {
     int sprite_size;
     unsigned char* sprite_data = extract_file_data_from_zip(cartridge, "assets/picolib_spritesheet.png", &sprite_size);
     if (sprite_data) {
-        picolib_load_spritesheet_from_memory(sprite_data, sprite_size);
+        pic2d_load_spritesheet_from_memory(sprite_data, sprite_size);
         free(sprite_data);
     } else {
         picolib_load_spritesheet(PICOLIB_SS);
@@ -272,7 +273,7 @@ int main(int argc, char *argv[]) {
     int font_size;
     unsigned char* font_data = extract_file_data_from_zip(cartridge, "assets/font_pico8.png", &font_size);
     if (font_data) {
-        picolib_load_font_from_memory(font_data, font_size);
+        pic2d_load_font_from_memory(font_data, font_size);
         free(font_data);
     } else {
         picolib_load_font(PICOLIB_FONT);
@@ -305,7 +306,7 @@ int main(int argc, char *argv[]) {
     #if PICOLIB_USE_MAP == 1
         char* map_data = extract_file_from_zip(cartridge, "assets/map.csv");
         if (map_data) {
-            picolib_load_map_from_memory(map_data);
+            pic2d_load_map_from_memory(map_data);
             free(map_data);
         } else {
             // Карты нет в архиве — можно попробовать загрузить из файловой системы

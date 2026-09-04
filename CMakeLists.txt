@@ -72,8 +72,9 @@ endif()
 add_executable(pic2d
     src/main.c
     src/picolib-lua.c
+    src/pic2d-core.c
     miniz/miniz.c
-    picolib/picolib-core.c
+    picolib/picolib.c
 )
 
 # ==========================================================
