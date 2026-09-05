@@ -201,8 +201,8 @@ int main(int argc, char *argv[]) {
 
     HideCursor();
 
-    #if PICOLIB_USE_AUDIO == 1
-    InitAudioDevice();
+    #if PICOLIB_USE_AUDIO == 1 || PICOLIB_USE_TONE == 1
+        InitAudioDevice();
     #endif
 
     target = LoadRenderTexture(PICOLIB_WIDTH, PICOLIB_HEIGHT);
