@@ -13,6 +13,9 @@
 #include "miniz.h"
 
 
+#define PIC2D_DEBUG_LOG 1
+
+
 void get_save_directory(char* out_path, size_t size) {
     #ifdef _WIN32
         // Windows
@@ -183,7 +186,7 @@ int main(int argc, char *argv[]) {
     InitWindow(PICOLIB_WIDTH * initial_scale, PICOLIB_HEIGHT * initial_scale, "PIC2D");
 
     // --- Перенаправление stdout и stderr в файл (для printf и прочего) ---
-    #if PICOLIB_DEBUG_LOG == 1
+    #if PIC2D_DEBUG_LOG == 1
         // Открываем файл для записи (затираем предыдущий)
         freopen("log.txt", "w", stdout);
         freopen("log.txt", "w", stderr);

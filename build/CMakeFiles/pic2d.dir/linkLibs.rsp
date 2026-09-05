@@ -1,1 +1,0 @@
-  -LC:/home/pururun/Dev/C/projects/PIC2D/raylib/lib  -LC:/home/pururun/Dev/C/projects/PIC2D/lua/lib  C:/home/pururun/Dev/C/projects/PIC2D/raylib/lib/libraylib.a C:/home/pururun/Dev/C/projects/PIC2D/lua/lib/liblua.a -lgdi32 -lwinmm -lshell32 -lopengl32 -lkernel32 -luser32 -lgdi32 -lwinspool -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32 

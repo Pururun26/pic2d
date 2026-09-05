@@ -254,6 +254,12 @@ void ovalfill(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint8_t color) {
     DrawEllipse(cx - cam_x, cy - cam_y, rx, ry, c);
 }
 
+// Рисует пиксель в (x, y) цветом color (0-15) с учётом камеры
+void pset(int16_t x, int16_t y, uint8_t color) {
+    Color c = (color < PICOLIB_COLOR_COUNT) ? palette[color] : palette[0];
+    DrawPixel(x - cam_x, y - cam_y, c);
+}
+
 
 // --- 4. СПРАЙТЫ ---
 void spr_pro(int16_t n, int16_t x, int16_t y, uint8_t w, uint8_t h, bool flip_x, bool flip_y) {

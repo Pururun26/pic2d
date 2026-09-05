@@ -86,6 +86,49 @@ static int lua_rectfill(lua_State *L) {
     return 0;
 }
 
+// --- Линия ---
+static int lua_line(lua_State *L) {
+    int x0 = (int)luaL_checkinteger(L, 1);
+    int y0 = (int)luaL_checkinteger(L, 2);
+    int x1 = (int)luaL_checkinteger(L, 3);
+    int y1 = (int)luaL_checkinteger(L, 4);
+    int color = (int)luaL_checkinteger(L, 5);
+    line(x0, y0, x1, y1, color);
+    return 0;
+}
+
+// --- Овал (пустой) ---
+static int lua_oval(lua_State *L) {
+    int x0 = (int)luaL_checkinteger(L, 1);
+    int y0 = (int)luaL_checkinteger(L, 2);
+    int x1 = (int)luaL_checkinteger(L, 3);
+    int y1 = (int)luaL_checkinteger(L, 4);
+    int color = (int)luaL_checkinteger(L, 5);
+    oval(x0, y0, x1, y1, color);
+    return 0;
+}
+
+// --- Овал (залитый) ---
+static int lua_ovalfill(lua_State *L) {
+    int x0 = (int)luaL_checkinteger(L, 1);
+    int y0 = (int)luaL_checkinteger(L, 2);
+    int x1 = (int)luaL_checkinteger(L, 3);
+    int y1 = (int)luaL_checkinteger(L, 4);
+    int color = (int)luaL_checkinteger(L, 5);
+    ovalfill(x0, y0, x1, y1, color);
+    return 0;
+}
+
+// --- Пиксель ---
+static int lua_pset(lua_State *L) {
+    int x = (int)luaL_checkinteger(L, 1);
+    int y = (int)luaL_checkinteger(L, 2);
+    int color = (int)luaL_checkinteger(L, 3);
+    pset(x, y, color);
+    return 0;
+}
+
+
 // --- Кнопки ---
 static int lua_btn(lua_State *L) {
     int key = luaL_checkinteger(L, 1);
@@ -155,6 +198,19 @@ static int lua_camera(lua_State *L) {
 static int lua_sfx(lua_State *L) {
     int index = luaL_checkinteger(L, 1);
     sfx(index);
+    return 0;
+}
+#endif
+
+// --- Тон (синтез звука) ---
+#if PICOLIB_USE_TONE == 1
+static int lua_tone(lua_State *L) {
+    uint32_t frequency = (uint32_t)luaL_checkinteger(L, 1);
+    uint32_t duration = (uint32_t)luaL_checkinteger(L, 2);
+    uint32_t volume = (uint32_t)luaL_checkinteger(L, 3);
+    uint32_t flags = (uint32_t)luaL_checkinteger(L, 4);
+
+    tone(frequency, duration, volume, flags);
     return 0;
 }
 #endif
@@ -253,6 +309,10 @@ void picolib_lua_register(lua_State *L) {
     lua_register(L, "circfill", lua_circfill);
     lua_register(L, "rect", lua_rect);
     lua_register(L, "rectfill", lua_rectfill);
+    lua_register(L, "line", lua_line);
+    lua_register(L, "oval", lua_oval);
+    lua_register(L, "ovalfill", lua_ovalfill);
+    lua_register(L, "pset", lua_pset);
     lua_register(L, "btn", lua_btn);
     lua_register(L, "btnp", lua_btnp);
     lua_register(L, "camera", lua_camera);
@@ -260,6 +320,9 @@ void picolib_lua_register(lua_State *L) {
     lua_register(L, "mousep", lua_mousep);
     #if PICOLIB_USE_AUDIO == 1
     lua_register(L, "sfx", lua_sfx);
+    #endif
+    #if PICOLIB_USE_TONE == 1
+    lua_register(L, "tone", lua_tone);
     #endif
     lua_register(L, "save", lua_save_storage);
     lua_register(L, "load", lua_load_storage);

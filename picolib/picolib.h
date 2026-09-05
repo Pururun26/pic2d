@@ -87,6 +87,7 @@ void rectfill(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint8_t color);
 void line(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint8_t color);
 void oval(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint8_t color);
 void ovalfill(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint8_t color);
+void pset(int16_t x, int16_t y, uint8_t color);
 
 // --- Спрайты ---
 // Простая версия: рисует один спрайт 8x8
